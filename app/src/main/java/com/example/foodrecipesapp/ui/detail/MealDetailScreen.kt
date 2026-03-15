@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.example.foodrecipesapp.domain.model.Meal
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import com.example.foodrecipesapp.ui.components.DecorativeBackground
 import com.example.foodrecipesapp.ui.components.ErrorContent
 import com.example.foodrecipesapp.ui.components.FoodTopBar
@@ -55,6 +56,7 @@ import com.example.foodrecipesapp.ui.theme.FoodTextPrimary
 import com.example.foodrecipesapp.ui.theme.FoodTextSecondary
 
 @Composable
+@OptIn(ExperimentalLayoutApi::class)
 fun MealDetailScreen(
     mealId: String,
     onBack: () -> Unit,
