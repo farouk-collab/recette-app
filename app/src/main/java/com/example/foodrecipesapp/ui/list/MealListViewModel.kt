@@ -148,11 +148,12 @@ class MealListViewModel(application: Application) : AndroidViewModel(application
         selectedCategory: String?,
         selectedCuisine: String?
     ): List<Meal> {
-        val normalizedQuery = normalize(rawQuery)
-        val hasQuery = normalizedQuery.isNotBlank()
+        val queryTerms = buildCandidateQueries(rawQuery)
+        val hasQuery = queryTerms.isNotEmpty()
+        val hasStructuredFilters = selectedCategory != null || selectedCuisine != null
         val queryMeals = when {
-            hasQuery -> searchMealsWithAliases(rawQuery)
-            selectedCategory == null && selectedCuisine == null -> repository.searchMeals("chicken")
+            hasQuery && !hasStructuredFilters -> searchMealsWithAliases(rawQuery)
+            !hasQuery && !hasStructuredFilters -> repository.searchMeals("chicken")
             else -> emptyList()
         }
 
@@ -165,7 +166,7 @@ class MealListViewModel(application: Application) : AndroidViewModel(application
         }
 
         val sources = listOfNotNull(
-            queryMeals.takeIf { hasQuery || (selectedCategory == null && selectedCuisine == null) },
+            queryMeals.takeIf { it.isNotEmpty() },
             categoryMeals,
             cuisineMeals
         )
@@ -174,30 +175,44 @@ class MealListViewModel(application: Application) : AndroidViewModel(application
             return emptyList()
         }
 
-        return sources
+        val mergedMeals = sources
             .reduce { acc, meals ->
                 val mealIds = meals.asSequence().map { it.id }.toHashSet()
                 acc.filter { it.id in mealIds }
             }
             .distinctBy { it.id }
             .sortedBy { it.title }
+
+        return if (hasQuery && hasStructuredFilters) {
+            mergedMeals.filter { meal ->
+                queryTerms.any { term ->
+                    normalize(meal.title).contains(term)
+                }
+            }
+        } else {
+            mergedMeals
+        }
     }
 
     private suspend fun searchMealsWithAliases(rawQuery: String): List<Meal> {
-        val normalizedQuery = normalize(rawQuery)
-        val candidateQueries = buildList {
-            add(rawQuery.trim())
-            add(normalizedQuery)
-            addAll(searchSynonyms[normalizedQuery].orEmpty())
-        }
-            .map { it.trim() }
-            .filter { it.isNotBlank() }
-            .distinct()
+        val candidateQueries = buildCandidateQueries(rawQuery)
 
         return candidateQueries
             .flatMap { repository.searchMeals(it) }
             .distinctBy { it.id }
             .sortedBy { it.title }
+    }
+
+    private fun buildCandidateQueries(rawQuery: String): List<String> {
+        val normalizedQuery = normalize(rawQuery)
+        return buildList {
+            add(rawQuery.trim())
+            add(normalizedQuery)
+            addAll(searchSynonyms[normalizedQuery].orEmpty())
+        }
+            .map { normalize(it.trim()) }
+            .filter { it.isNotBlank() }
+            .distinct()
     }
 
     private fun setMeals(meals: List<Meal>) {
