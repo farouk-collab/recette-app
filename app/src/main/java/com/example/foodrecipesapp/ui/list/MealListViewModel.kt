@@ -67,27 +67,17 @@ class MealListViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun onSearchQueryChange(query: String) {
-        _uiState.value = _uiState.value.copy(
-            searchQuery = query,
-            selectedCategory = null,
-            selectedCuisine = null
-        )
+        _uiState.value = _uiState.value.copy(searchQuery = query)
     }
 
     fun onCategorySelected(category: String) {
-        _uiState.value = _uiState.value.copy(
-            selectedCategory = category,
-            selectedCuisine = null
-        )
-        loadMealsByCategory(category)
+        _uiState.value = _uiState.value.copy(selectedCategory = category)
+        loadMeals()
     }
 
     fun onCuisineSelected(cuisine: String) {
-        _uiState.value = _uiState.value.copy(
-            selectedCuisine = cuisine,
-            selectedCategory = null
-        )
-        loadMealsByCuisine(cuisine)
+        _uiState.value = _uiState.value.copy(selectedCuisine = cuisine)
+        loadMeals()
     }
 
     fun clearCategorySelection() {
@@ -114,61 +104,16 @@ class MealListViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
                 isLoading = true,
-                error = null,
-                selectedCategory = null,
-                selectedCuisine = null
-            )
-
-            try {
-                val rawQuery = _uiState.value.searchQuery.ifBlank { "chicken" }
-                val meals = searchMealsWithAliases(rawQuery)
-                setMeals(meals)
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    meals = emptyList(),
-                    visibleMeals = emptyList(),
-                    error = e.message ?: "Une erreur est survenue"
-                )
-            }
-        }
-    }
-
-    fun loadMealsByCategory(category: String) {
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(
-                isLoading = true,
                 error = null
             )
 
             try {
-                val meals = repository.getMealsByCategory(category)
-                setMeals(meals)
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    meals = emptyList(),
-                    visibleMeals = emptyList(),
-                    error = e.message ?: "Une erreur est survenue"
+                val state = _uiState.value
+                val meals = buildFilteredMeals(
+                    rawQuery = state.searchQuery,
+                    selectedCategory = state.selectedCategory,
+                    selectedCuisine = state.selectedCuisine
                 )
-            }
-        }
-    }
-
-    fun loadMealsByCuisine(cuisine: String) {
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(
-                isLoading = true,
-                error = null
-            )
-
-            try {
-                val areas = cuisineAreaMap[cuisine].orEmpty()
-                val meals = areas
-                    .flatMap { repository.getMealsByArea(it) }
-                    .distinctBy { it.id }
-                    .sortedBy { it.title }
-
                 setMeals(meals)
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
@@ -195,6 +140,46 @@ class MealListViewModel(application: Application) : AndroidViewModel(application
             currentPage = nextPage,
             canLoadMore = nextVisibleMeals.size < state.meals.size
         )
+    }
+
+    private suspend fun buildFilteredMeals(
+        rawQuery: String,
+        selectedCategory: String?,
+        selectedCuisine: String?
+    ): List<Meal> {
+        val normalizedQuery = normalize(rawQuery)
+        val hasQuery = normalizedQuery.isNotBlank()
+        val queryMeals = when {
+            hasQuery -> searchMealsWithAliases(rawQuery)
+            selectedCategory == null && selectedCuisine == null -> repository.searchMeals("chicken")
+            else -> emptyList()
+        }
+
+        val categoryMeals = selectedCategory?.let { repository.getMealsByCategory(it) }
+        val cuisineMeals = selectedCuisine?.let { cuisine ->
+            cuisineAreaMap[cuisine]
+                .orEmpty()
+                .flatMap { repository.getMealsByArea(it) }
+                .distinctBy { it.id }
+        }
+
+        val sources = listOfNotNull(
+            queryMeals.takeIf { hasQuery || (selectedCategory == null && selectedCuisine == null) },
+            categoryMeals,
+            cuisineMeals
+        )
+
+        if (sources.isEmpty()) {
+            return emptyList()
+        }
+
+        return sources
+            .reduce { acc, meals ->
+                val mealIds = meals.asSequence().map { it.id }.toHashSet()
+                acc.filter { it.id in mealIds }
+            }
+            .distinctBy { it.id }
+            .sortedBy { it.title }
     }
 
     private suspend fun searchMealsWithAliases(rawQuery: String): List<Meal> {
