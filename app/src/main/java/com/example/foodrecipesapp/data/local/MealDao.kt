@@ -20,6 +20,9 @@ interface MealDao{
     @Query("SELECT * FROM meals WHERE category = :category ORDER BY title ASC")
     suspend fun getMealsByCategory(category: String): List<MealEntity>
 
+    @Query("SELECT * FROM meals WHERE area = :area ORDER BY title ASC")
+    suspend fun getMealsByArea(area: String): List<MealEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertMeals(meals: List<MealEntity>)
 

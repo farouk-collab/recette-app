@@ -25,4 +25,9 @@ interface MealApi {
     suspend fun getMealsByCategory(
         @Query("c") category: String
     ): MealsResponse
+
+    @GET("filter.php")
+    suspend fun getMealsByArea(
+        @Query("a") area: String
+    ): MealsResponse
 }

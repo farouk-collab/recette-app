@@ -11,17 +11,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.example.foodrecipesapp.domain.model.Category
 import com.example.foodrecipesapp.ui.theme.FoodCardBackground
 import com.example.foodrecipesapp.ui.theme.FoodChipBackground
 import com.example.foodrecipesapp.ui.theme.FoodOrange
 import com.example.foodrecipesapp.ui.theme.FoodTextSecondary
 
 @Composable
-fun CategoryChips(
-    categories: List<Category>,
-    selectedCategory: String?,
-    onCategoryClick: (String) -> Unit,
+fun CuisineChips(
+    cuisines: List<String>,
+    selectedCuisine: String?,
+    onCuisineClick: (String) -> Unit,
     onClearSelection: () -> Unit
 ) {
     LazyRow(
@@ -29,9 +28,9 @@ fun CategoryChips(
     ) {
         item {
             FilterChip(
-                selected = selectedCategory == null,
+                selected = selectedCuisine == null,
                 onClick = onClearSelection,
-                label = { Text("Tous") },
+                label = { Text("Toutes") },
                 modifier = Modifier.padding(vertical = 2.dp),
                 colors = FilterChipDefaults.filterChipColors(
                     selectedContainerColor = FoodOrange,
@@ -42,11 +41,11 @@ fun CategoryChips(
             )
         }
 
-        items(categories) { category ->
+        items(cuisines) { cuisine ->
             FilterChip(
-                selected = selectedCategory == category.name,
-                onClick = { onCategoryClick(category.name) },
-                label = { Text(category.name) },
+                selected = selectedCuisine == cuisine,
+                onClick = { onCuisineClick(cuisine) },
+                label = { Text(cuisine) },
                 modifier = Modifier.padding(vertical = 2.dp),
                 colors = FilterChipDefaults.filterChipColors(
                     selectedContainerColor = FoodOrange,

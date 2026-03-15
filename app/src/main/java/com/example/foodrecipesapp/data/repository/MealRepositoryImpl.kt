@@ -61,6 +61,16 @@ class MealRepositoryImpl(
         }
     }
 
+    override suspend fun getMealsByArea(area: String): List<Meal> {
+        return try {
+            val remoteMeals = api.getMealsByArea(area).meals?.map { it.toMeal() } ?: emptyList()
+            mealDao.insertMeals(remoteMeals.map { it.toEntity() })
+            remoteMeals
+        } catch (_: Exception) {
+            mealDao.getMealsByArea(area).map { it.toMeal() }
+        }
+    }
+
     override suspend fun refreshCategories() {
         val remoteCategories = api.getCategories().categories.map { it.toCategory() }
         categoryDao.clearCategories()
