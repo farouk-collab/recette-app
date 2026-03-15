@@ -10,6 +10,8 @@ import com.example.foodrecipesapp.domain.model.Meal
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.Normalizer
 
@@ -61,6 +63,7 @@ class MealListViewModel(application: Application) : AndroidViewModel(application
 
     private val _uiState = MutableStateFlow(MealListUiState())
     val uiState: StateFlow<MealListUiState> = _uiState.asStateFlow()
+    private var searchJob: Job? = null
 
     init {
         loadCategories()
@@ -69,6 +72,7 @@ class MealListViewModel(application: Application) : AndroidViewModel(application
 
     fun onSearchQueryChange(query: String) {
         _uiState.value = _uiState.value.copy(searchQuery = query)
+        scheduleSearch()
     }
 
     fun onCategorySelected(category: String) {
@@ -102,6 +106,7 @@ class MealListViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun loadMeals() {
+        searchJob?.cancel()
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
                 isLoading = true,
@@ -213,6 +218,14 @@ class MealListViewModel(application: Application) : AndroidViewModel(application
             .map { normalize(it.trim()) }
             .filter { it.isNotBlank() }
             .distinct()
+    }
+
+    private fun scheduleSearch() {
+        searchJob?.cancel()
+        searchJob = viewModelScope.launch {
+            delay(350)
+            loadMeals()
+        }
     }
 
     private fun setMeals(meals: List<Meal>) {
