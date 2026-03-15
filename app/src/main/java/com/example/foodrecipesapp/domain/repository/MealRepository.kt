@@ -9,5 +9,6 @@ interface MealRepository {
     suspend fun getCategories(): List<Category>
     suspend fun getMealsByCategory(category: String): List<Meal>
     suspend fun getMealsByArea(area: String): List<Meal>
+    suspend fun preloadInitialData()
     suspend fun refreshCategories()
 }

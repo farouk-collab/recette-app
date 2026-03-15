@@ -55,7 +55,8 @@ class MealListViewModel(application: Application) : AndroidViewModel(application
     private val repository = MealRepositoryImpl(
         api = RetrofitInstance.api,
         mealDao = database.mealDao(),
-        categoryDao = database.categoryDao()
+        categoryDao = database.categoryDao(),
+        syncInfoDao = database.syncInfoDao()
     )
 
     private val _uiState = MutableStateFlow(MealListUiState())
